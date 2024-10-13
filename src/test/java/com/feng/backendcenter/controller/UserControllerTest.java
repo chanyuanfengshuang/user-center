@@ -1,6 +1,7 @@
 package com.feng.backendcenter.controller;
 
 import com.feng.backendcenter.model.dto.user.UserAddRequest;
+import com.feng.backendcenter.model.dto.user.UserLoginRequest;
 import com.feng.backendcenter.model.dto.user.UserRegisterRequest;
 import jakarta.annotation.Resource;
 import org.junit.jupiter.api.Test;
@@ -44,13 +45,22 @@ class UserControllerTest {
 
     @Test
     void userRegister() {
-        String userAccount = "root";
-        String userPassword = "123456";
-        String checkPassword = "123456";
+        String userAccount = "root124";
+        String userPassword = "12345698";
+        String checkPassword = "12345698";
         UserRegisterRequest user = new UserRegisterRequest();
         user.setUserAccount(userAccount);
         user.setUserPassword(userPassword);
         user.setCheckPassword(checkPassword);
         userController.userRegister(user);
     }
+//    @Test
+//    void userLogin() throws Exception {
+//        String userAccount = "root124";
+//        String userPassword = "12345698";
+//        UserLoginRequest user = new UserLoginRequest();
+//        user.setUserAccount(userAccount);
+//        user.setUserPassword(userPassword);
+//        userController.userLogin(user);
+//    }
 }
