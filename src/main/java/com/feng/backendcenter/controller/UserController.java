@@ -4,22 +4,20 @@ import com.feng.backendcenter.common.BaseResponse;
 import com.feng.backendcenter.common.ResultUtils;
 import com.feng.backendcenter.exception.BusinessException;
 import com.feng.backendcenter.exception.ErrorCode;
-import com.feng.backendcenter.model.dto.user.UserAddRequest;
-import com.feng.backendcenter.model.dto.user.UserLoginRequest;
-import com.feng.backendcenter.model.dto.user.UserRegisterRequest;
+import com.feng.backendcenter.model.dto.user.*;
 import com.feng.backendcenter.model.entity.User;
 import com.feng.backendcenter.service.UserService;
 import jakarta.annotation.Resource;
 import jakarta.servlet.http.HttpServletRequest;
-import org.apache.commons.lang3.StringUtils;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.beans.BeanUtils;
+import org.springframework.context.annotation.Bean;
+import org.springframework.web.bind.annotation.*;
+
+import static com.feng.backendcenter.constant.UserConstant.ROLE_ADMIN;
+import static com.feng.backendcenter.constant.UserConstant.USER_LOGIN_STATE;
 
 /**
- * @author bood
- * @since 2024/09/29 22:13
+ *  用户接口
  */
 @RestController
 @RequestMapping("/user")
@@ -27,26 +25,6 @@ public class UserController {
     @Resource
     UserService userService;
 
-    /**
-     *  添加用户
-     * @param userAddRequest 用户添加请求
-     * @return  添加结果
-     */
-    @PostMapping("/add")
-    public BaseResponse<Boolean> addUser(@RequestBody UserAddRequest userAddRequest){
-        User user = new User();
-        user.setUserAccount(userAddRequest.getUserAccount());
-        user.setUserPassword(userAddRequest.getUserPassword());
-        user.setUserNickname(userAddRequest.getUserNickname());
-        user.setUserRole(userAddRequest.getUserRole());
-        user.setUserProfile(userAddRequest.getUserProfile());
-        user.setUserAvatar(userAddRequest.getUserAvatar());
-        user.setUserPhone(userAddRequest.getUserPhone());
-        user.setUserEmail(userAddRequest.getUserEmail());
-        user.setUserAddress(userAddRequest.getUserAddress());
-        userService.save(user);
-        return ResultUtils.success(true);
-    }
 
     /**
      *  用户登录
@@ -56,15 +34,11 @@ public class UserController {
      */
     @PostMapping("/login")
     public BaseResponse<Long> userLogin(@RequestBody UserLoginRequest userLoginRequest, HttpServletRequest httpServletRequest) throws Exception {
-        //1.校验
-        if (userLoginRequest == null) {
-            return ResultUtils.error(ErrorCode.PARAMERS_ERROR);
+        if(userLoginRequest == null){
+            throw new BusinessException(ErrorCode.PARAMERS_ERROR,"参数为空");
         }
         String userAccount = userLoginRequest.getUserAccount();
         String userPassword = userLoginRequest.getUserPassword();
-        if (StringUtils.isAnyBlank(userAccount, userPassword)) {
-            return ResultUtils.error(ErrorCode.PARAMERS_ERROR);
-        }
         BaseResponse<Long> result = userService.userLogin(userAccount, userPassword, httpServletRequest);
         return result;
     }
@@ -76,17 +50,136 @@ public class UserController {
      */
     @PostMapping("/register")
     public BaseResponse<Long> userRegister(@RequestBody UserRegisterRequest userRegisterRequest) {
-        if(userRegisterRequest == null) {
+        if(userRegisterRequest == null){
             throw new BusinessException(ErrorCode.PARAMERS_ERROR,"参数为空");
         }
         String userAccount = userRegisterRequest.getUserAccount();
         String userPassword = userRegisterRequest.getUserPassword();
-
         String checkPassword = userRegisterRequest.getCheckPassword();
-        if (StringUtils.isAnyBlank(userAccount, userPassword, checkPassword)) {
-            throw new BusinessException(ErrorCode.PARAMERS_ERROR,"参数为空");
-        }
         BaseResponse<Long> result = userService.userRegister(userAccount, userPassword, checkPassword);
         return result;
     }
+
+    /**
+     *  获取当前登录用户
+     * @param httpServletRequest  httpServletRequest
+     * @return 当前登录用户
+     */
+    @GetMapping("/currentUserLogin")
+    public BaseResponse<User> currentUserLogin(HttpServletRequest httpServletRequest) {
+        BaseResponse<Long> longBaseResponse = userService.currentLoginUser(httpServletRequest);
+        if(longBaseResponse == null){
+            throw new BusinessException(ErrorCode.PARAMERS_ERROR,"当前用户未登录");
+        }
+        User user = userService.getById(longBaseResponse.getData());
+        User safeUser = new User();
+        safeUser.setUserId(user.getUserId());
+        safeUser.setUserAccount(user.getUserAccount());
+        safeUser.setUserNickname(user.getUserNickname());
+        safeUser.setUserProfile(user.getUserProfile());
+        safeUser.setUserAvatar(user.getUserAvatar());
+        safeUser.setUserPhone(user.getUserPhone());
+        safeUser.setUserEmail(user.getUserEmail());
+        safeUser.setUserAddress(user.getUserAddress());
+        safeUser.setCreateTime(user.getCreateTime());
+        return ResultUtils.success(user);
+    }
+
+    /**
+     *  通过用户id删除(管理员)
+     * @param  userRemoveRequest 用户id
+     * @return 是否成功
+     */
+    @PostMapping("/deleteUserById")
+    public BaseResponse<Boolean> deleteUserById(@RequestBody UserRemoveRequest userRemoveRequest,HttpServletRequest request){
+        if(!isAdmin(request)){
+            throw new BusinessException(ErrorCode.AUTHORIZATION_ERROR,"权限不足");
+        }
+        if(userRemoveRequest == null || userRemoveRequest.getId() == null){
+            throw new BusinessException(ErrorCode.PARAMERS_ERROR,"用户id不能为空");
+        }
+        Long id = userRemoveRequest.getId();
+        return ResultUtils.success(userService.removeById(id));
+    }
+
+    /**
+     * 更新用户信息
+     * @param userUpdateRequest 用户信息
+     * @return 是否成功
+     */
+
+    @PostMapping("/updateUser")
+    public BaseResponse<Boolean> updateUser(@RequestBody UserUpdateRequest userUpdateRequest) {
+        if(userUpdateRequest == null || userUpdateRequest.getUserId()== null){
+            throw new BusinessException(ErrorCode.PARAMERS_ERROR,"用户id不能为空");
+        }
+        User user = new User();
+        BeanUtils.copyProperties(userUpdateRequest,user);
+        return ResultUtils.success(userService.updateById(user));
+    }
+
+    /**
+     *  管理员添加用户
+     * @param userAddRequest 用户添加请求
+     * @return  添加结果
+     */
+    @PostMapping("/add")
+    public BaseResponse<Boolean> adminAddUser(@RequestBody UserAddRequest userAddRequest,HttpServletRequest request){
+        if(!isAdmin(request)){
+            throw new BusinessException(ErrorCode.AUTHORIZATION_ERROR,"权限不足");
+        }
+        if(userAddRequest == null){
+            throw new BusinessException(ErrorCode.PARAMERS_ERROR,"参数为空");
+        }
+        BaseResponse<Boolean> booleanBaseResponse = userService.adminAddUser(userAddRequest);
+        return ResultUtils.success(booleanBaseResponse.getData());
+    }
+
+    /**
+     * 通过id查询用户信息（管理员）
+     * @param id 用户id
+     * @return 用户信息
+     */
+    @GetMapping("/getUserById")
+    public BaseResponse<User> getUserById(Long id,HttpServletRequest request){
+        if(!isAdmin(request)){
+            throw new BusinessException(ErrorCode.AUTHORIZATION_ERROR,"权限不足");
+        }
+        BaseResponse<User> userInfoById = userService.getUserInfoById(id);
+        if (userInfoById == null){
+            throw new BusinessException(ErrorCode.USER_NOT_FOUND,"用户不存在");
+        }
+        return ResultUtils.success(userInfoById.getData());
+    }
+
+    /**
+     * 退出登录
+     * @param request 请求
+     * @return 退出结果
+     */
+    @GetMapping("/logout")
+    public BaseResponse<Boolean> userLogout(HttpServletRequest request){
+        if(request == null){
+            throw new BusinessException(ErrorCode.PARAMERS_ERROR,"参数为空");
+        }
+        boolean result = userService.userLogout(request);
+        return ResultUtils.success(result);
+    }
+
+
+    /**
+     * 判断是否为管理员
+     * @param request 请求
+     * @return 管理员判断结果
+     */
+
+    private boolean isAdmin(HttpServletRequest request){
+        Object attribute = request.getSession().getAttribute(USER_LOGIN_STATE);
+        User user = (User) attribute;
+        if(user.getUserRole() != ROLE_ADMIN){
+            return false;
+        }
+        return true;
+    }
+
 }

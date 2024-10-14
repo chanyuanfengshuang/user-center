@@ -3,8 +3,7 @@ package com.feng.backendcenter.common;
 import com.feng.backendcenter.exception.ErrorCode;
 
 /**
- * @author bood
- * @since 2024/10/11 17:03
+ *  @description: 响应工具类
  */
 public class ResultUtils {
 

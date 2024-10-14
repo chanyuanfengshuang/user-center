@@ -1,7 +1,7 @@
 package com.feng.backendcenter.exception;
 
 /**
- * 自定义异常返回值
+ * 自定义业务异常
  */
 public class BusinessException extends RuntimeException{
     /**

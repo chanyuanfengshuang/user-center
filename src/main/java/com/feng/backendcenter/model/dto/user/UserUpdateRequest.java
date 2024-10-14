@@ -1,27 +1,21 @@
-package com.feng.backendcenter.model.entity;
+package com.feng.backendcenter.model.dto.user;
 
-import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableId;
-
-import java.io.Serial;
-import java.io.Serializable;
-import java.util.Date;
+import lombok.Data;
 
 /**
+ * 用户更新请求
  * @author bood
- * @since 2024/10/11 18:39
+ * @since 2024/10/14 17:04
  */
-public class SafeUser implements Serializable {
+@Data
+public class UserUpdateRequest {
 
     /**
      *  用户id
      */
-    private Long id;
-    /**
-     * 账号
-     */
+    private Long userId;
 
-    private String userAccount;
 
     /**
      * 用户昵称
@@ -52,9 +46,5 @@ public class SafeUser implements Serializable {
      * 用户地址
      */
     private String userAddress;
-
-    @Serial
-    @TableField(exist = false)
-    private static final long serialVersionUID = 1L;
 
 }

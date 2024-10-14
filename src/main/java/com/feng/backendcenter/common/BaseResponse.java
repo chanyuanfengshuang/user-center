@@ -1,13 +1,15 @@
 package com.feng.backendcenter.common;
 
 import com.feng.backendcenter.exception.ErrorCode;
+import lombok.Data;
 
 import java.io.Serializable;
 
 /**
- * @author bood
- * @since 2024/10/11 10:45
+ * 通用返回类
+ * @param <T> 返回的数据类型
  */
+@Data
 public class BaseResponse<T> implements Serializable {
     private int code;
     private String message;

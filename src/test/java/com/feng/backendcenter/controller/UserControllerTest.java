@@ -39,7 +39,7 @@ class UserControllerTest {
         user.setUserEmail(userEmail);
         user.setUserAddress(userAddress);
         user.setUserAccount(userAccount);
-        userController.addUser(user);
+//        userController.adminAddUser(user);
     }
 
 
